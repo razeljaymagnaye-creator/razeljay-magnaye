@@ -1,0 +1,6 @@
+{
+  "name": "AI Survey Instrument",
+  "description": "AI Requirements Interview and Gathering Dashboard. Synthesize stakeholder interviews, validate requirements, extract functional & non-functional specifications, and track Likert consensus in real time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -10,6 +10,7 @@ const RESPONSES_KEY = 'ai_survey_stored_responses_v1';
 const SURVEYS_KEY = 'ai_survey_cached_surveys_v1';
 const SIMULATED_OFFLINE_KEY = 'ai_survey_simulated_offline';
 const SYNC_CONFLICTS_KEY = 'ai_survey_conflicts_log_v1';
+const RESET_MARKER_KEY = 'ai_survey_data_reset_2026_10_27_v1';
 
 // Symmetric Encryption Key Simulation with Web Crypto API fallback
 const ENCRYPTION_SALT = 'AISURVEY_SECURE_VAULT_2026';
@@ -333,6 +334,20 @@ class OfflineSyncManager {
   public clearConflicts() {
     localStorage.removeItem(SYNC_CONFLICTS_KEY);
     this.notify();
+  }
+
+  // One-time cleanup of existing survey content, preserving authentication and settings.
+  public clearSurveyDataOnce(): boolean {
+    if (localStorage.getItem(RESET_MARKER_KEY) === 'done') return false;
+
+    localStorage.removeItem(QUEUE_KEY);
+    localStorage.removeItem(RESPONSES_KEY);
+    localStorage.removeItem(SURVEYS_KEY);
+    localStorage.removeItem(SYNC_CONFLICTS_KEY);
+    localStorage.removeItem('ai_survey_last_sync_time');
+    localStorage.setItem(RESET_MARKER_KEY, 'done');
+    this.notify();
+    return true;
   }
 
   // Survey caching for offline availability

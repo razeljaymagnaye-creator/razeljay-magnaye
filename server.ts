@@ -18,6 +18,8 @@ app.use(express.json({ limit: '10mb' }));
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',
   httpOptions: {
+    // Allow slower production responses, while keeping requests bounded.
+    timeout: 30000,
     headers: {
       'User-Agent': 'aistudio-build',
     },
@@ -46,12 +48,14 @@ const hasValidGeminiKey = Boolean(
   process.env.GEMINI_API_KEY.length > 10
 );
 
-// Request timeout helper for model calls
-function withTimeout<T>(promise: Promise<T>, ms = 3500): Promise<T> {
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('AI request timed out')), ms)
-  );
-  return Promise.race([promise, timeout]);
+// Request timeout helper for model calls.
+// Clear the timer when the model responds so completed requests don't leave timers behind.
+function withTimeout<T>(promise: Promise<T>, ms = 20000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('AI request timed out')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 // -------------------------------------------------------------
@@ -361,7 +365,7 @@ CRITICAL INSTRUCTION:
         systemInstruction,
         temperature: 0.7,
       },
-    }), 3500);
+    }), 25000);
 
     const reply = aiResponse.text || 'I am ready to assist with your survey design and psychometric evaluation.';
 

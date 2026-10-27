@@ -17,13 +17,16 @@ import { SyncModal } from './components/SyncModal';
 import { PrintReportView } from './components/PrintReportView';
 import { ChatBot } from './components/ChatBot';
 import { LoginModal } from './components/LoginModal';
-import { INITIAL_SURVEYS, INITIAL_QUESTION_BANK, INITIAL_RESPONSES } from './data/mockData';
-import { INITIAL_REQUIREMENTS, deriveRequirementsFromResponses } from './data/requirementsData';
+import { deriveRequirementsFromResponses } from './data/requirementsData';
 import { Survey, SurveyQuestion, SurveyResponse, AppUser, RequirementItem } from './types/survey';
 import { offlineSyncManager, SyncStatusState } from './utils/offlineSync';
 import { authManager } from './utils/auth';
 import { ReportTemplateType } from './utils/exportUtils';
 import { PREDEFINED_LIKERT_TEMPLATES } from './utils/likertTemplates';
+
+// Clear legacy demo and saved survey data once on each browser after deployment.
+// Authentication records and application configuration are intentionally preserved.
+offlineSyncManager.clearSurveyDataOnce();
 
 export default function App() {
   // Authentication & Current User State
@@ -48,27 +51,16 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Surveys State
-  const [surveys, setSurveys] = useState<Survey[]>(() => {
-    const cached = offlineSyncManager.getCachedSurveys();
-    return cached.length > 0 ? cached : INITIAL_SURVEYS;
-  });
+  const [surveys, setSurveys] = useState<Survey[]>(() => offlineSyncManager.getCachedSurveys());
 
   const [activeSurveyId, setActiveSurveyId] = useState<string>(surveys[0]?.id || 'survey-structured-01');
 
   // Question Bank State & Modal
-  const [questionBank, setQuestionBank] = useState<SurveyQuestion[]>(INITIAL_QUESTION_BANK);
+  const [questionBank, setQuestionBank] = useState<SurveyQuestion[]>([]);
   const [showQuestionBankModal, setShowQuestionBankModal] = useState<boolean>(false);
 
   // Survey Responses State
-  const [responses, setResponses] = useState<SurveyResponse[]>(() => {
-    const stored = offlineSyncManager.getAllStoredResponses();
-    if (stored.length > 0) {
-      const storedIds = new Set(stored.map(s => s.id));
-      const combined = [...stored, ...INITIAL_RESPONSES.filter(r => !storedIds.has(r.id))];
-      return combined;
-    }
-    return INITIAL_RESPONSES;
-  });
+  const [responses, setResponses] = useState<SurveyResponse[]>(() => offlineSyncManager.getAllStoredResponses());
 
   // Requirements State (Synthesized from interviews & surveys)
   const [requirements, setRequirements] = useState<RequirementItem[]>(() => {

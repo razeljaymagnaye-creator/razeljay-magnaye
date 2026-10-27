@@ -58,6 +58,32 @@ function withTimeout<T>(promise: Promise<T>, ms = 20000): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Retry only temporary Gemini capacity, rate-limit, and server errors.
+// A short exponential backoff helps with transient 429/503/5xx responses.
+async function generateContentWithRetry<T>(
+  request: () => Promise<T>,
+  attempts = 3,
+  timeoutMs = 25000,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await withTimeout(request(), timeoutMs);
+    } catch (error: any) {
+      const message = String(error?.message || error);
+      const status = Number(error?.status || error?.code || error?.response?.status);
+      const retryable =
+        status === 408 || status === 429 || status === 500 || status === 502 ||
+        status === 503 || status === 504 ||
+        /UNAVAILABLE|RESOURCE_EXHAUSTED|temporarily unavailable|high demand|\b503\b|\b429\b/i.test(message);
+
+      if (!retryable || attempt >= attempts - 1) throw error;
+      const delayMs = 1000 * (2 ** attempt);
+      console.warn(`Gemini temporary error; retrying in ${delayMs}ms (attempt ${attempt + 2}/${attempts}): ${message}`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 // -------------------------------------------------------------
 // AI API Endpoints
 // -------------------------------------------------------------
@@ -358,14 +384,14 @@ CRITICAL INSTRUCTION:
       'Copilot:',
     ].join('\n\n');
 
-    const aiResponse = await withTimeout(ai.models.generateContent({
+    const aiResponse = await generateContentWithRetry(() => ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: conversationPrompt,
       config: {
         systemInstruction,
         temperature: 0.7,
       },
-    }), 25000);
+    }), 3, 25000);
 
     const reply = aiResponse.text || 'I am ready to assist with your survey design and psychometric evaluation.';
 

@@ -251,6 +251,19 @@ export default function App() {
 
         {/* View Router */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {!activeSurvey ? (
+            <div className="min-h-[50vh] flex flex-col items-center justify-center text-center gap-4">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">No survey data</h2>
+              <p className="max-w-md text-sm text-slate-500">Existing surveys, questions, responses, and analysis records have been cleared. Create a new survey to begin collecting fresh data.</p>
+              <button
+                onClick={() => setShowNewSurveyModal(true)}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 cursor-pointer"
+              >
+                Create New Survey
+              </button>
+            </div>
+          ) : (
+          <>
           {/* View 1: Bolt-Style Dashboard Overview */}
           {currentView === 'dashboard' && (
             <DashboardOverview
@@ -377,6 +390,8 @@ export default function App() {
               syncStatus={syncStatus}
               onOpenSyncModal={() => setIsSyncModalOpen(true)}
             />
+          )}
+          </>
           )}
         </main>
       </div>

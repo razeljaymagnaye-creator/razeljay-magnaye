@@ -384,20 +384,46 @@ CRITICAL INSTRUCTION:
       'Copilot:',
     ].join('\n\n');
 
-    const aiResponse = await generateContentWithRetry(() => ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: conversationPrompt,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-      },
-    }), 3, 25000);
+    // Model names are configurable in Render without another code change.
+    // Example:
+    // GEMINI_MODEL_PRIMARY=gemini-3.8-flash
+    // GEMINI_MODEL_FALLBACKS=gemini-3.6-flash,gemini-3.5-flash-lite
+    const primaryModel = process.env.GEMINI_MODEL_PRIMARY?.trim() || 'gemini-3.8-flash';
+    const fallbackModels = (process.env.GEMINI_MODEL_FALLBACKS || 'gemini-3.6-flash,gemini-3.5-flash-lite')
+      .split(',')
+      .map(model => model.trim())
+      .filter(Boolean);
+    const modelsToTry = [...new Set([primaryModel, ...fallbackModels])];
+    let aiResponse: any = null;
+    let selectedModel = '';
+
+    for (const model of modelsToTry) {
+      try {
+        console.info(`Trying Gemini chat model: ${model}`);
+        aiResponse = await generateContentWithRetry(() => ai.models.generateContent({
+          model,
+          contents: conversationPrompt,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+          },
+        }), 2, 20000);
+        selectedModel = model;
+        break;
+      } catch (modelError: any) {
+        console.warn(`Gemini chat model ${model} failed; trying next configured model:`, modelError?.message || modelError);
+      }
+    }
+
+    if (!aiResponse) {
+      throw new Error(`All configured Gemini chat models failed: ${modelsToTry.join(', ')}`);
+    }
 
     const reply = aiResponse.text || 'I am ready to assist with your survey design and psychometric evaluation.';
 
     return res.json({
       success: true,
-      source: 'gemini-3.8-flash',
+      source: selectedModel,
       reply,
     });
   } catch (error: any) {

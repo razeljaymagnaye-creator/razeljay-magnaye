@@ -18,6 +18,7 @@ import { PrintReportView } from './components/PrintReportView';
 import { ChatBot } from './components/ChatBot';
 import { LoginModal } from './components/LoginModal';
 import { deriveRequirementsFromResponses } from './data/requirementsData';
+import { INITIAL_QUESTION_BANK, INITIAL_RESPONSES, INITIAL_SURVEYS } from './data/mockData';
 import { Survey, SurveyQuestion, SurveyResponse, AppUser, RequirementItem } from './types/survey';
 import { offlineSyncManager, SyncStatusState } from './utils/offlineSync';
 import { authManager } from './utils/auth';
@@ -51,16 +52,22 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Surveys State
-  const [surveys, setSurveys] = useState<Survey[]>(() => offlineSyncManager.getCachedSurveys());
+  const [surveys, setSurveys] = useState<Survey[]>(() => {
+    const cached = offlineSyncManager.getCachedSurveys();
+    return cached.length ? cached : INITIAL_SURVEYS;
+  });
 
   const [activeSurveyId, setActiveSurveyId] = useState<string>(surveys[0]?.id || 'survey-structured-01');
 
   // Question Bank State & Modal
-  const [questionBank, setQuestionBank] = useState<SurveyQuestion[]>([]);
+  const [questionBank, setQuestionBank] = useState<SurveyQuestion[]>(INITIAL_QUESTION_BANK);
   const [showQuestionBankModal, setShowQuestionBankModal] = useState<boolean>(false);
 
   // Survey Responses State
-  const [responses, setResponses] = useState<SurveyResponse[]>(() => offlineSyncManager.getAllStoredResponses());
+  const [responses, setResponses] = useState<SurveyResponse[]>(() => {
+    const stored = offlineSyncManager.getAllStoredResponses();
+    return stored.length ? stored : INITIAL_RESPONSES;
+  });
 
   // Requirements State (Synthesized from interviews & surveys)
   const [requirements, setRequirements] = useState<RequirementItem[]>(() => {
